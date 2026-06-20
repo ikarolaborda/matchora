@@ -1,0 +1,43 @@
+{
+  "name": "matchora",
+  "version": "0.1.0",
+  "private": true,
+  "description": "MatchOra — independent live football scores (web + iOS). Not affiliated with FIFA or any tournament organizer.",
+  "packageManager": "pnpm@9.15.0",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "dev": "turbo run dev --parallel",
+    "dev:web": "pnpm --filter @matchora/web dev",
+    "dev:mobile": "pnpm --filter @matchora/mobile start",
+    "dev:simulate": "pnpm --filter @matchora/data simulate",
+    "build": "turbo run build",
+    "lint": "turbo run lint",
+    "typecheck": "turbo run typecheck",
+    "test": "turbo run test",
+    "test:e2e": "pnpm --filter @matchora/web test:e2e",
+    "db:generate": "pnpm --filter @matchora/data db:generate",
+    "db:migrate": "pnpm --filter @matchora/data db:migrate",
+    "db:seed": "pnpm --filter @matchora/data db:seed",
+    "format": "prettier --write \"**/*.{ts,tsx,js,jsx,json,md}\""
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.0",
+    "prettier": "^3.4.2",
+    "turbo": "^2.3.3",
+    "typescript": "^5.7.2",
+    "vitest": "^2.1.8"
+  },
+  "pnpm": {
+    "overrides": {
+      "@types/react": "19.2.17"
+    },
+    "peerDependencyRules": {
+      "allowedVersions": {
+        "react": "18 || 19",
+        "react-dom": "18 || 19"
+      }
+    }
+  }
+}

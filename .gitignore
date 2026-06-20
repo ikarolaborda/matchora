@@ -1,0 +1,31 @@
+# dependencies
+node_modules/
+.pnpm-store/
+
+# builds
+dist/
+.next/
+out/
+*.tsbuildinfo
+
+# expo
+.expo/
+ios/Pods/
+
+# env
+.env
+.env.local
+.env.*.local
+
+# test / coverage
+coverage/
+playwright-report/
+test-results/
+
+# agent state (never commit)
+.agent/
+.serena/
+
+# os / editor
+.DS_Store
+*.log

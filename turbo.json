@@ -1,0 +1,22 @@
+{
+  "$schema": "https://turbo.build/schema.json",
+  "globalEnv": [
+    "DATABASE_URL",
+    "REDIS_URL",
+    "FOOTBALL_DATA_PROVIDER",
+    "SPORTMONKS_API_KEY",
+    "API_FOOTBALL_KEY",
+    "SPORTRADAR_API_KEY",
+    "NEXT_PUBLIC_APP_NAME",
+    "NEXT_PUBLIC_TOURNAMENT_LABEL",
+    "NEXT_PUBLIC_DISCLAIMER",
+    "NEXT_PUBLIC_API_BASE_URL"
+  ],
+  "tasks": {
+    "build": { "dependsOn": ["^build"], "outputs": ["dist/**", ".next/**", "!.next/cache/**"] },
+    "dev": { "cache": false, "persistent": true },
+    "lint": { "dependsOn": ["^build"] },
+    "typecheck": { "dependsOn": ["^build"] },
+    "test": { "dependsOn": ["^build"], "outputs": ["coverage/**"] }
+  }
+}

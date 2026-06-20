@@ -1,0 +1,60 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: dark;
+}
+
+@layer base {
+  html,
+  body {
+    background-color: theme('colors.bg');
+    color: theme('colors.text');
+    font-family:
+      system-ui,
+      -apple-system,
+      'Segoe UI',
+      Roboto,
+      Helvetica,
+      Arial,
+      sans-serif;
+  }
+
+  *:focus-visible {
+    outline: 2px solid theme('colors.brand');
+    outline-offset: 2px;
+  }
+}
+
+@layer utilities {
+  /* Live pulse indicator — disabled under reduced-motion. */
+  .live-pulse {
+    animation: matchora-pulse 1.6s ease-in-out infinite;
+  }
+
+  @keyframes matchora-pulse {
+    0%,
+    100% {
+      opacity: 1;
+      transform: scale(1);
+    }
+    50% {
+      opacity: 0.45;
+      transform: scale(0.85);
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .live-pulse {
+      animation: none;
+    }
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.001ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.001ms !important;
+    }
+  }
+}
