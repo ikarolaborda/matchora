@@ -12,7 +12,7 @@ jobs:
       matrix:
         node: [20, 22]
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       # pnpm version is read from package.json "packageManager"; do not also
       # set "version" here or action-setup errors with ERR_PNPM_BAD_PM_VERSION.
       - uses: pnpm/action-setup@v4
