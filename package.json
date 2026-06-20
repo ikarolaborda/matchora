@@ -20,6 +20,10 @@
     "db:generate": "pnpm --filter @matchora/data db:generate",
     "db:migrate": "pnpm --filter @matchora/data db:migrate",
     "db:seed": "pnpm --filter @matchora/data db:seed",
+    "docker:build": "docker compose build",
+    "docker:up": "docker compose up -d --build",
+    "docker:down": "docker compose down",
+    "docker:logs": "docker compose logs -f web",
     "format": "prettier --write \"**/*.{ts,tsx,js,jsx,json,md}\""
   },
   "devDependencies": {

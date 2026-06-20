@@ -14,6 +14,7 @@
 import { getServerConfig, type ProviderName } from '@matchora/config';
 import type { FootballDataProvider } from './provider.js';
 import { LiveHub } from './live/hub.js';
+import { KafkaLiveTransport } from './live/kafkaTransport.js';
 import { SimulationEngine } from './live/simulation.js';
 import { MockFootballDataProvider } from './mock/provider.js';
 import { ApiFootballAdapter } from './adapters/apiFootball.js';
@@ -24,8 +25,29 @@ let _mock: MockFootballDataProvider | null = null;
 let _sim: SimulationEngine | null = null;
 let _livePoller: ReturnType<typeof setInterval> | null = null;
 
+/**
+ * Shared LiveHub. Default = in-memory transport (zero infra, always works).
+ * When KAFKA_BROKERS is configured (opt-in, multi-process deployments) the hub
+ * is backed by Kafka; the transport connects in the background and fails open
+ * (a Kafka outage degrades cross-process live fanout, never app startup).
+ */
 export function getHub(): LiveHub {
-  if (!_hub) {
+  if (_hub) {
+    return _hub;
+  }
+  const { kafka } = getServerConfig();
+  if (kafka.brokers.length > 0) {
+    const transport = new KafkaLiveTransport({
+      brokers: kafka.brokers,
+      clientId: kafka.clientId,
+      topic: kafka.topic,
+      groupSuffix: `${process.pid}`,
+    });
+    void transport.start().catch((err) => {
+      console.warn('[matchora] Kafka transport failed to start; live fanout degraded:', err);
+    });
+    _hub = new LiveHub(transport);
+  } else {
     _hub = new LiveHub();
   }
   return _hub;
@@ -40,6 +62,7 @@ export function getProvider(): FootballDataProvider {
     _provider = new ApiFootballAdapter(
       {
         apiKey: config.providerKeys.apiFootball,
+        baseUrl: config.apiFootball.baseUrl,
         leagueId: config.apiFootball.leagueId,
         season: config.apiFootball.season,
       },

@@ -17,9 +17,15 @@ const envSchema = z.object({
   REDIS_URL: z.string().optional(),
   SPORTMONKS_API_KEY: z.string().optional(),
   API_FOOTBALL_KEY: z.string().optional(),
+  API_FOOTBALL_BASE_URL: z.string().default('https://v3.football.api-sports.io'),
   API_FOOTBALL_LEAGUE_ID: z.coerce.number().int().default(1),
   API_FOOTBALL_SEASON: z.coerce.number().int().default(2026),
   SPORTRADAR_API_KEY: z.string().optional(),
+  // Kafka event bus — OPTIONAL. When KAFKA_BROKERS is empty, the LiveHub uses
+  // its in-memory transport so the app runs with no Kafka.
+  KAFKA_BROKERS: z.string().optional(),
+  KAFKA_CLIENT_ID: z.string().default('matchora'),
+  KAFKA_TOPIC: z.string().default('match-events'),
   NEXT_PUBLIC_APP_NAME: z.string().default('MatchOra'),
   NEXT_PUBLIC_TOURNAMENT_LABEL: z.string().default('World Football Tournament 2026'),
   NEXT_PUBLIC_DISCLAIMER: z
@@ -42,8 +48,14 @@ export interface ServerConfig {
     sportradar: string | null;
   };
   apiFootball: {
+    baseUrl: string;
     leagueId: number;
     season: number;
+  };
+  kafka: {
+    brokers: string[];
+    clientId: string;
+    topic: string;
   };
   branding: Branding;
   features: FeatureFlags;
@@ -103,8 +115,18 @@ export function getServerConfig(source?: Record<string, string | undefined>): Se
       sportradar: env.SPORTRADAR_API_KEY ?? null,
     },
     apiFootball: {
+      baseUrl: env.API_FOOTBALL_BASE_URL,
       leagueId: env.API_FOOTBALL_LEAGUE_ID,
       season: env.API_FOOTBALL_SEASON,
+    },
+    kafka: {
+      brokers: env.KAFKA_BROKERS
+        ? env.KAFKA_BROKERS.split(',')
+            .map((b) => b.trim())
+            .filter(Boolean)
+        : [],
+      clientId: env.KAFKA_CLIENT_ID,
+      topic: env.KAFKA_TOPIC,
     },
     branding: getBranding(source),
     features: {

@@ -1,0 +1,28 @@
+# deps & build outputs (re-created in the image)
+**/node_modules
+**/.next
+**/dist
+**/.turbo
+**/coverage
+**/*.tsbuildinfo
+
+# agent state, vcs, env, editor
+.agent
+.serena
+.git
+.github
+**/.env
+**/.env.*
+!**/.env.example
+.vscode
+.idea
+
+# expo / mobile native outputs (web image doesn't need them)
+apps/mobile/.expo
+apps/mobile/ios/Pods
+apps/mobile/android
+
+# docs/tests not needed at build (keep package.json + source for tracing)
+**/*.log
+playwright-report
+test-results
