@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<!--
+		MatchOra iOS Privacy Manifest (PrivacyInfo.xcprivacy)
+
+		Standalone copy of the privacy declarations. The canonical source for
+		EAS-managed builds is the `expo.ios.privacyManifests` block in app.json,
+		which Expo's prebuild merges into the generated PrivacyInfo.xcprivacy.
+		This file is kept as a human-readable mirror / reference and for bare
+		(non-managed) workflows.
+
+		Declarations:
+		- NSPrivacyTracking = false: the app does not track users (no IDFA, no
+		  cross-app/-site linking with third parties).
+		- NSPrivacyTrackingDomains = empty: no tracking domains.
+		- NSPrivacyCollectedDataTypes = empty: the app collects no data tied to
+		  the user identity (thin read-only client over the public match API).
+		- NSPrivacyAccessedAPITypes: UserDefaults is read/written by React Native
+		  / Expo (AsyncStorage, settings) -> required-reason code CA92.1
+		  ("Access info from same app, per documentation").
+	-->
+	<key>NSPrivacyTracking</key>
+	<false/>
+	<key>NSPrivacyTrackingDomains</key>
+	<array/>
+	<key>NSPrivacyCollectedDataTypes</key>
+	<array/>
+	<key>NSPrivacyAccessedAPITypes</key>
+	<array>
+		<dict>
+			<key>NSPrivacyAccessedAPIType</key>
+			<string>NSPrivacyAccessedAPICategoryUserDefaults</string>
+			<key>NSPrivacyAccessedAPITypeReasons</key>
+			<array>
+				<string>CA92.1</string>
+			</array>
+		</dict>
+	</array>
+</dict>
+</plist>

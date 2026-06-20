@@ -4,10 +4,16 @@ import {
   simulateGroupStanding,
 } from '@matchora/shared';
 import { getProvider } from '@matchora/data';
-import { jsonResponse, errorResponse } from '@/lib/api-helpers';
+import { jsonResponse, errorResponse, rateLimitedResponse } from '@/lib/api-helpers';
+import { checkRateLimit } from '@/lib/rate-limit';
+import { captureError } from '@/lib/observability';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
+
+// Simulation is CPU-bound and burst-prone; cap POST simulate per client.
+// (GET reads are intentionally NOT rate-limited.)
+const SIMULATE_RATE_LIMIT = { key: 'simulate', limit: 30, windowMs: 60_000 };
 
 export async function GET(request: Request) {
   const url = new URL(request.url);
@@ -27,11 +33,17 @@ export async function GET(request: Request) {
       : all;
     return jsonResponse({ standings }, { cacheSeconds: 0 });
   } catch (err) {
+    captureError(err, { route: 'GET /api/standings' });
     return errorResponse('standings_failed', 'Could not load standings', 500, String(err));
   }
 }
 
 export async function POST(request: Request) {
+  const rl = checkRateLimit(request, SIMULATE_RATE_LIMIT);
+  if (!rl.ok) {
+    return rateLimitedResponse(rl);
+  }
+
   let body: unknown;
   try {
     body = await request.json();
@@ -79,6 +91,7 @@ export async function POST(request: Request) {
       { cacheSeconds: 0 },
     );
   } catch (err) {
+    captureError(err, { route: 'POST /api/standings' });
     return errorResponse('simulate_failed', 'Simulation failed', 500, String(err));
   }
 }

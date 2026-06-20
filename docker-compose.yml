@@ -32,6 +32,26 @@ services:
         condition: service_healthy
       valkey:
         condition: service_started
+      migrate:
+        condition: service_completed_successfully
+    networks:
+      - matchora
+
+  # One-shot DB migration runner: applies Drizzle migrations once, then exits.
+  # Single-instance pre-step (NOT migrate-on-start across replicas). web waits
+  # for it to complete successfully before booting.
+  migrate:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: migrate
+    image: matchora/migrate:0.1.0
+    restart: 'no'
+    environment:
+      DATABASE_URL: postgres://matchora:matchora@postgres:5432/matchora
+    depends_on:
+      postgres:
+        condition: service_healthy
     networks:
       - matchora
 

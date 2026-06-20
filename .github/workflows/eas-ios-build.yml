@@ -1,0 +1,53 @@
+# Builds the MatchOra iOS app on Expo Application Services (EAS).
+#
+# Prerequisites (one-time setup, NOT done by this workflow):
+#   1. Add an EXPO_TOKEN repository secret. Create it in your Expo account
+#      (Account settings → Access tokens → "Robot" token) and add it under
+#      GitHub → Settings → Secrets and variables → Actions → New secret.
+#   2. Run `eas init` inside `apps/mobile` so the app's `app.json`/`app.config`
+#      carries a REAL `extra.eas.projectId`. The build will fail without it.
+#   3. Define `production` and `preview` build profiles in
+#      `apps/mobile/eas.json` (the `profile` input below selects one of them).
+name: EAS iOS Build
+
+on:
+  workflow_dispatch:
+    inputs:
+      profile:
+        description: EAS build profile to use
+        type: choice
+        required: true
+        default: production
+        options:
+          - production
+          - preview
+  push:
+    tags:
+      - "v*"
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # pnpm version is read from package.json "packageManager"; do not also
+      # set "version" here or action-setup errors with ERR_PNPM_BAD_PM_VERSION.
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      - name: Setup EAS
+        uses: expo/expo-github-action@v8
+        with:
+          eas-version: latest
+          token: ${{ secrets.EXPO_TOKEN }}
+
+      - name: Build iOS app
+        working-directory: apps/mobile
+        run: eas build --platform ios --profile ${{ inputs.profile || 'production' }} --non-interactive --no-wait

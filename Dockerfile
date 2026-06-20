@@ -17,6 +17,14 @@ RUN --mount=type=cache,id=pnpm,target=/root/.local/share/pnpm/store \
 ENV NODE_ENV=production
 RUN pnpm --filter @matchora/web build
 
+# ── migrate: one-shot Drizzle migration runner (run as a compose pre-step) ────
+# Reuses the builder (full workspace + tsx + drizzle-kit + generated SQL). Used
+# by the compose `migrate` service; exits after applying migrations.
+FROM builder AS migrate
+WORKDIR /app
+ENV NODE_ENV=production
+CMD ["pnpm", "--filter", "@matchora/data", "run", "db:migrate:run"]
+
 # ── runner: minimal standalone image, non-root ───────────────────────────────
 FROM node:${NODE_VERSION} AS runner
 WORKDIR /app

@@ -1,0 +1,57 @@
+# Builds the MatchOra web image from the root Dockerfile and publishes it to
+# the GitHub Container Registry (GHCR).
+#
+# Authentication uses the automatically provided GITHUB_TOKEN secret — no
+# manual secret setup is required. The job grants `packages: write` so the
+# token can push to ghcr.io/<owner>/matchora-web.
+#
+# Note: the first push to a new GHCR package creates it as private. Make it
+# public (or grant pull access) via the package settings on GitHub if needed.
+name: Docker Publish
+
+on:
+  workflow_dispatch:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract image metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ghcr.io/${{ github.repository_owner }}/matchora-web
+          tags: |
+            type=raw,value=latest
+            type=ref,event=tag
+            type=sha
+
+      - name: Build and push
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: Dockerfile
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max

@@ -1,13 +1,13 @@
 /**
  * Match detail — large score, status + minute, and an event timeline.
  *
- * LIVE UPDATES — design choice: React Native has no built-in EventSource, and
- * the web SSE endpoint (/api/live/matches/[id]/events) needs a streaming
- * client. For the MVP we POLL /api/fixtures/[id] every 5s via React Query
- * (refetchInterval). This is simple, robust on flaky mobile networks, and
- * reuses the exact same shared types. A future enhancement is an RN EventSource
- * shim (e.g. react-native-sse) wired to serializeSse/parseSseData with
- * Last-Event-ID resume — documented in docs/PUSH_NOTIFICATIONS.md / SHARED_API.
+ * LIVE UPDATES — SSE with polling fallback (see src/lib/useLiveMatch.ts):
+ * we consume the web SSE endpoint (/api/live/matches/[id]/events) via
+ * react-native-sse, parsing `snapshot`/`match_event` frames per the wire
+ * contract (packages/SHARED_API.md), with Last-Event-ID resume handled by the
+ * EventSource. When the SSE module is unavailable (Hermes/runtime quirk) or
+ * errors repeatedly, the hook transparently falls back to the existing
+ * React-Query polling. A small connection chip surfaces live/reconnecting/stale.
  *
  * No-spoilers: when enabled we mask the score (maskFixture) and drop revealing
  * events from the timeline (maskEvents), both from @matchora/shared.
@@ -15,22 +15,22 @@
 import { useEffect, useMemo, useRef } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { Stack, useLocalSearchParams } from 'expo-router';
-import { useQuery } from '@tanstack/react-query';
 import * as Haptics from 'expo-haptics';
 import {
   formatKickoff,
   isAlertableGoal,
   maskEvents,
   maskFixture,
+  type ConnectionState,
   type MatchEvent,
 } from '@matchora/shared';
-import { fetchFixture } from '@/src/api';
 import { usePrefs } from '@/src/lib/prefs';
+import { useLiveMatch } from '@/src/lib/useLiveMatch';
 import { Screen } from '@/src/components/Screen';
 import { TeamBadge } from '@/src/components/TeamBadge';
 import { ScoreDisplay } from '@/src/components/ScoreDisplay';
 import { StatusChip } from '@/src/components/StatusChip';
-import { Loading, ErrorState } from '@/src/components/Empty';
+import { Loading, ErrorState, EmptyState } from '@/src/components/Empty';
 import { colors, fontSize, radius, space, weight } from '@/src/lib/theme';
 
 const EVENT_LABEL: Record<string, string> = {
@@ -55,22 +55,41 @@ const EVENT_LABEL: Record<string, string> = {
   score_corrected: 'Score corrected',
 };
 
+/** Visual style for the live-connection chip per transport state. */
+const CONNECTION_META: Record<
+  ConnectionState,
+  { label: string; color: string; pulse: boolean }
+> = {
+  connecting: { label: 'Connecting…', color: colors.textMuted, pulse: true },
+  live: { label: 'Live', color: colors.brand, pulse: true },
+  reconnecting: { label: 'Reconnecting…', color: colors.textMuted, pulse: true },
+  stale: { label: 'Offline — retrying', color: colors.textFaint, pulse: false },
+};
+
+function ConnectionChip({ state, usingSse }: { state: ConnectionState; usingSse: boolean }) {
+  const meta = CONNECTION_META[state];
+  return (
+    <View style={styles.connChip} accessibilityRole="text">
+      <View style={[styles.connDot, { backgroundColor: meta.color }]} />
+      <Text style={[styles.connLabel, { color: meta.color }]}>
+        {meta.label}
+        {!usingSse && state === 'live' ? ' (polling)' : ''}
+      </Text>
+    </View>
+  );
+}
+
 export default function MatchDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { noSpoilers, locale, timeZone } = usePrefs();
 
-  const query = useQuery({
-    queryKey: ['fixture', id],
-    queryFn: () => fetchFixture(id),
-    enabled: !!id,
-    // Poll while the screen is open (MVP live updates — see file header).
-    refetchInterval: 5_000,
-  });
+  const live = useLiveMatch(id);
 
-  // Haptic feedback when a new alertable goal appears.
+  // Haptic feedback when a new alertable goal appears (skip the first render so
+  // we don't buzz for already-played events on screen open).
   const lastSeqRef = useRef<number>(-1);
   useEffect(() => {
-    const events = query.data?.events ?? [];
+    const events = live.events;
     if (events.length === 0) return;
     const newest = events[events.length - 1] as MatchEvent;
     if (newest.sequence > lastSeqRef.current) {
@@ -79,27 +98,33 @@ export default function MatchDetailScreen() {
       }
       lastSeqRef.current = newest.sequence;
     }
-  }, [query.data?.events, noSpoilers]);
+  }, [live.events, noSpoilers]);
 
   const view = useMemo(() => {
-    if (!query.data) return null;
-    const { fixture, events } = query.data;
+    if (!live.fixture) return null;
+    const fixture = live.fixture;
     const masked = maskFixture(fixture, noSpoilers);
-    const timeline = maskEvents(events, noSpoilers)
+    const timeline = maskEvents(live.events, noSpoilers)
       .slice()
       .sort((a, b) => b.sequence - a.sequence);
     return { fixture, masked, timeline };
-  }, [query.data, noSpoilers]);
+  }, [live.fixture, live.events, noSpoilers]);
+
+  const showError = live.error && !live.fixture;
 
   return (
     <>
       <Stack.Screen options={{ title: 'Match' }} />
-      <Screen refreshing={query.isFetching} onRefresh={() => void query.refetch()}>
-        {query.isLoading ? <Loading /> : null}
-        {query.isError ? <ErrorState message={(query.error as Error).message} /> : null}
+      <Screen refreshing={live.isLoading} onRefresh={live.refetch}>
+        {live.isLoading && !view ? <Loading /> : null}
+        {showError ? <ErrorState message={live.error?.message ?? 'Could not load match.'} /> : null}
 
         {view ? (
           <>
+            <View style={styles.connRow}>
+              <ConnectionChip state={live.connection} usingSse={live.usingSse} />
+            </View>
+
             <View style={styles.scoreCard}>
               <View style={styles.teams}>
                 <TeamBadge teamId={view.fixture.homeTeamId} layout="stacked" />
@@ -130,9 +155,11 @@ export default function MatchDetailScreen() {
 
             <Text style={styles.sectionTitle}>Timeline</Text>
             {view.timeline.length === 0 ? (
-              <Text style={styles.empty}>
-                {noSpoilers ? 'Events hidden in no-spoilers mode.' : 'No events yet.'}
-              </Text>
+              <EmptyState
+                message={
+                  noSpoilers ? 'Events hidden in no-spoilers mode.' : 'No events yet.'
+                }
+              />
             ) : (
               <View style={styles.timeline}>
                 {view.timeline.map((e) => (
@@ -157,6 +184,20 @@ export default function MatchDetailScreen() {
 }
 
 const styles = StyleSheet.create({
+  connRow: { alignItems: 'flex-end' },
+  connChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: space.xs,
+    paddingVertical: 4,
+    paddingHorizontal: space.sm,
+    borderRadius: radius.md,
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  connDot: { width: 8, height: 8, borderRadius: 4 },
+  connLabel: { fontSize: fontSize.caption, fontWeight: weight.title },
   scoreCard: {
     backgroundColor: colors.surface,
     borderRadius: radius.lg,
@@ -177,7 +218,6 @@ const styles = StyleSheet.create({
     letterSpacing: 0.6,
     marginTop: space.md,
   },
-  empty: { color: colors.textFaint, fontSize: fontSize.body, paddingVertical: space.md },
   timeline: {
     backgroundColor: colors.surface,
     borderRadius: radius.lg,

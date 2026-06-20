@@ -18,6 +18,7 @@
     "@matchora/shared": "workspace:*",
     "@matchora/ui": "workspace:*",
     "@tanstack/react-query": "^5.62.0",
+    "drizzle-orm": "^0.38.2",
     "next": "^15.1.3",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
