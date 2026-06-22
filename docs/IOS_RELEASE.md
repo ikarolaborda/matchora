@@ -208,3 +208,22 @@ eas submit --platform ios --profile production      # upload to App Store Connec
   added before a build (see `apps/mobile/assets/README.md`).
 - All **[APPLE]** steps are interactive and account-gated; the placeholders in
   `eas.json` must be replaced with real account values.
+
+---
+
+## Running EAS without a global install
+
+`eas-cli` is pinned in `apps/mobile` devDependencies (same version locally and in
+CI). If `eas` is "command not found", you do NOT need a global install — run it
+through the workspace binary or the provided scripts:
+
+```bash
+cd apps/mobile
+pnpm exec eas login                 # or: pnpm run eas:login
+pnpm exec eas init                  # links project / writes real projectId
+pnpm run eas:build:ios              # eas build --platform ios --profile production
+pnpm run eas:submit:ios             # eas submit --platform ios --profile production
+```
+
+Prefer a global CLI? `npm install -g eas-cli` (then `eas login` works directly).
+The login/build/submit steps are interactive (Expo + Apple ID/2FA).
