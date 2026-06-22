@@ -2,9 +2,13 @@
  * HTTP client for the MatchOra web API.
  *
  * The mobile app is a thin client: it talks to the existing Next.js API over
- * HTTP (EXPO_PUBLIC_API_BASE_URL, default http://localhost:3000) and reuses the
- * canonical domain types from @matchora/shared. Response envelopes mirror the
- * web route handlers exactly (see apps/web/src/app/api/*).
+ * HTTP and reuses the canonical domain types from @matchora/shared. Response
+ * envelopes mirror the web route handlers exactly (see apps/web/src/app/api/*).
+ *
+ * The base URL is resolved at runtime from the backend store (see
+ * src/lib/backend.ts): a build-time default seeds it and the user can override
+ * it from Settings. We resolve per-request so a URL change takes effect without
+ * a reload.
  */
 import type {
   Fixture,
@@ -13,9 +17,9 @@ import type {
   MatchEvent,
   FixtureStatus,
 } from '@matchora/shared';
+import { getBackendUrl } from './lib/backend';
 
-export const API_BASE_URL =
-  process.env.EXPO_PUBLIC_API_BASE_URL?.replace(/\/$/, '') ?? 'http://localhost:3000';
+export { getBackendUrl } from './lib/backend';
 
 export const DEFAULT_COMPETITION_ID = 'wft-2026';
 
@@ -25,7 +29,11 @@ interface ApiErrorEnvelope {
 }
 
 async function getJson<T>(path: string, init?: RequestInit): Promise<T> {
-  const res = await fetch(`${API_BASE_URL}${path}`, {
+  const base = getBackendUrl();
+  if (base === '') {
+    throw new Error('Backend URL not set. Open Settings and enter your server URL.');
+  }
+  const res = await fetch(`${base}${path}`, {
     ...init,
     headers: { Accept: 'application/json', ...(init?.headers ?? {}) },
   });

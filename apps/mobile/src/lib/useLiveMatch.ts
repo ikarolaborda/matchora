@@ -27,7 +27,7 @@ import {
   type FixtureSnapshot,
   type MatchEvent,
 } from '@matchora/shared';
-import { API_BASE_URL, fetchFixture } from '@/src/api';
+import { fetchFixture, getBackendUrl } from '@/src/api';
 
 /* ── react-native-sse capability check ──────────────────────────────────────
  * Loaded lazily and defensively: a require() failure (module missing, Hermes
@@ -145,8 +145,16 @@ export function useLiveMatch(
       return;
     }
 
+    // No backend configured yet: skip SSE; polling (which also no-ops/errors
+    // gracefully) will resume once a URL is set.
+    const base = getBackendUrl();
+    if (base === '') {
+      setSseActive(false);
+      return;
+    }
+
     setConnection('connecting');
-    const url = `${API_BASE_URL}/api/live/matches/${encodeURIComponent(id)}/events`;
+    const url = `${base}/api/live/matches/${encodeURIComponent(id)}/events`;
     let es: RnEventSource;
     try {
       es = new Ctor(url, { pollingInterval: POLL_FAST });

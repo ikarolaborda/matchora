@@ -10,6 +10,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { colors } from '@/src/lib/theme';
 import { PrefsProvider } from '@/src/lib/prefs';
 import { registerForPushNotificationsAsync } from '@/src/lib/notifications';
+import { loadBackendUrl, subscribeBackendUrl } from '@/src/lib/backend';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -21,6 +22,32 @@ const queryClient = new QueryClient({
     },
   },
 });
+
+/**
+ * Hydrate the persisted backend URL once on start, then refetch everything when
+ * it resolves or later changes (e.g. the user saves a new URL in Settings) so
+ * every screen re-queries against the new base.
+ */
+function useBackendHydration() {
+  useEffect(() => {
+    let cancelled = false;
+    void loadBackendUrl().then(() => {
+      if (!cancelled) void queryClient.invalidateQueries();
+    });
+    const unsubscribe = subscribeBackendUrl(() => {
+      // Switching backends is an environment switch, not a refresh: cancel
+      // in-flight requests against the old host and drop its cached data
+      // before refetching, so no stale cross-host data is ever shown.
+      void queryClient.cancelQueries();
+      queryClient.removeQueries();
+      void queryClient.invalidateQueries();
+    });
+    return () => {
+      cancelled = true;
+      unsubscribe();
+    };
+  }, []);
+}
 
 function useNotificationRegistration() {
   useEffect(() => {
@@ -43,6 +70,7 @@ function useNotificationRegistration() {
 }
 
 export default function RootLayout() {
+  useBackendHydration();
   useNotificationRegistration();
 
   return (

@@ -18,6 +18,7 @@
     "@babel/runtime": "^8.0.0",
     "@matchora/shared": "workspace:*",
     "@matchora/ui": "workspace:*",
+    "@react-native-async-storage/async-storage": "1.23.1",
     "@tanstack/react-query": "^5.62.0",
     "babel-preset-expo": "~12.0.0",
     "expo": "~52.0.0",
