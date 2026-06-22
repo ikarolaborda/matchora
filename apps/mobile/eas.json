@@ -1,6 +1,6 @@
 {
   "cli": {
-    "version": ">= 13.0.0",
+    "version": ">=20.3.0",
     "appVersionSource": "remote"
   },
   "build": {
@@ -33,6 +33,12 @@
       },
       "env": {
         "EXPO_PUBLIC_API_BASE_URL": "https://api.matchora.example.com"
+      }
+    },
+    "preview-simulator": {
+      "extends": "preview",
+      "ios": {
+        "simulator": true
       }
     }
   },
