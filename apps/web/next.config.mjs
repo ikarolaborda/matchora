@@ -1,7 +1,21 @@
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { readFileSync, existsSync } from 'node:fs';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
+
+// Load repo-root .env in dev so local FOOTBALL_DATA_PROVIDER / API_FOOTBALL_* "just work"
+// (next dev only loads apps/web/.env*, not the monorepo root). Real process env wins.
+const rootEnvPath = path.resolve(__dirname, '../../.env');
+if (existsSync(rootEnvPath)) {
+  for (const raw of readFileSync(rootEnvPath, 'utf8').split('\n')) {
+    const m = raw.match(/^\s*([A-Za-z_][A-Za-z0-9_]*)\s*=\s*(.*?)\s*$/);
+    if (!m || raw.trimStart().startsWith('#')) continue;
+    const key = m[1];
+    let val = m[2].replace(/^["']|["']$/g, '');
+    if (process.env[key] === undefined) process.env[key] = val;
+  }
+}
 
 const isDev = process.env.NODE_ENV === 'development';
 

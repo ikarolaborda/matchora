@@ -24,6 +24,35 @@ let _provider: FootballDataProvider | null = null;
 let _mock: MockFootballDataProvider | null = null;
 let _sim: SimulationEngine | null = null;
 let _livePoller: ReturnType<typeof setInterval> | null = null;
+let _warnedMockDefault = false;
+
+/**
+ * Server-only, once-per-process warning when the data layer resolves to the
+ * mock provider WITHOUT being explicitly asked for it. A silent default should
+ * never look like a data bug, so we distinguish the two surprising cases:
+ *   - FOOTBALL_DATA_PROVIDER unset/empty -> nobody chose a provider.
+ *   - FOOTBALL_DATA_PROVIDER set to a real provider but downgraded (no key).
+ * We stay quiet when it is explicitly 'mock' (that's an intentional choice).
+ */
+function warnMockDefaultOnce(): void {
+  if (_warnedMockDefault) {
+    return;
+  }
+  const raw = process.env.FOOTBALL_DATA_PROVIDER;
+  if (raw && raw.trim().toLowerCase() === 'mock') {
+    return;
+  }
+  _warnedMockDefault = true;
+  if (!raw || raw.trim() === '') {
+    console.warn(
+      '[matchora] FOOTBALL_DATA_PROVIDER not set — using MOCK data. Set it (and API_FOOTBALL_KEY) for real data.',
+    );
+  } else {
+    console.warn(
+      `[matchora] FOOTBALL_DATA_PROVIDER=${raw} but its API key is missing — falling back to MOCK data.`,
+    );
+  }
+}
 
 /**
  * Shared LiveHub. Default = in-memory transport (zero infra, always works).
@@ -69,6 +98,7 @@ export function getProvider(): FootballDataProvider {
       getHub(),
     );
   } else {
+    warnMockDefaultOnce();
     _provider = getMockProvider();
   }
   return _provider;

@@ -52,13 +52,17 @@ export default function HomeScreen() {
     [toggleFavorite],
   );
 
+  const group = (fixtures: Fixture[]) => ({
+    live: fixtures.filter((f) => LIVE_STATUSES.includes(f.snapshot.status)),
+    upcoming: fixtures.filter((f) => f.snapshot.status === 'scheduled'),
+    finished: fixtures.filter((f) => f.snapshot.status === 'finished'),
+  });
+
   const sections = useMemo(() => {
-    const fixtures = query.data ?? [];
-    const live = fixtures.filter((f) => LIVE_STATUSES.includes(f.snapshot.status));
-    const upcoming = fixtures.filter((f) => f.snapshot.status === 'scheduled');
-    const finished = fixtures.filter((f) => f.snapshot.status === 'finished');
-    const favorites = (allQuery.data ?? []).filter((f) => isFavorite(f.id));
-    return { live, upcoming, finished, favorites };
+    const today = query.data ?? [];
+    const all = allQuery.data ?? [];
+    const favorites = all.filter((f) => isFavorite(f.id));
+    return { today: group(today), all: group(all), favorites, todayCount: today.length, allCount: all.length };
   }, [query.data, allQuery.data, isFavorite]);
 
   const renderCard = (f: Fixture) => (
@@ -91,25 +95,57 @@ export default function HomeScreen() {
         <Section title="Favorites">{sections.favorites.map(renderCard)}</Section>
       ) : null}
 
-      {sections.live.length > 0 ? (
-        <Section title="Live now" accent>
-          {sections.live.map(renderCard)}
-        </Section>
+      {sections.todayCount > 0 ? (
+        <>
+          {sections.today.live.length > 0 ? (
+            <Section title="Live now" accent>
+              {sections.today.live.map(renderCard)}
+            </Section>
+          ) : null}
+
+          {sections.today.upcoming.length > 0 ? (
+            <Section title="Upcoming">{sections.today.upcoming.map(renderCard)}</Section>
+          ) : null}
+
+          {sections.today.finished.length > 0 ? (
+            <Section title="Finished">{sections.today.finished.map(renderCard)}</Section>
+          ) : null}
+        </>
       ) : null}
 
-      {sections.upcoming.length > 0 ? (
-        <Section title="Upcoming">{sections.upcoming.map(renderCard)}</Section>
-      ) : null}
+      {/* No fixtures today: fall back to the full slate so the screen stays useful
+          on historical / off-day seasons. */}
+      {!query.isLoading && !query.isError && sections.todayCount === 0 && sections.allCount > 0 ? (
+        <>
+          <Text style={styles.note}>No matches today — showing all fixtures.</Text>
 
-      {sections.finished.length > 0 ? (
-        <Section title="Finished">{sections.finished.map(renderCard)}</Section>
+          {sections.all.live.length > 0 ? (
+            <Section title="Live now" accent>
+              {sections.all.live.map(renderCard)}
+            </Section>
+          ) : null}
+
+          {sections.all.upcoming.length > 0 ? (
+            <Section title="Upcoming">{sections.all.upcoming.map(renderCard)}</Section>
+          ) : null}
+
+          {sections.all.finished.length > 0 ? (
+            <Section title="Finished">{sections.all.finished.map(renderCard)}</Section>
+          ) : null}
+
+          {sections.all.live.length === 0 &&
+          sections.all.upcoming.length === 0 &&
+          sections.all.finished.length === 0 ? (
+            <Section title="All fixtures">{(allQuery.data ?? []).map(renderCard)}</Section>
+          ) : null}
+        </>
       ) : null}
 
       {!query.isLoading &&
       !query.isError &&
-      sections.live.length === 0 &&
-      sections.upcoming.length === 0 &&
-      sections.finished.length === 0 ? (
+      !allQuery.isLoading &&
+      sections.todayCount === 0 &&
+      sections.allCount === 0 ? (
         <EmptyState message="No matches scheduled today." />
       ) : null}
     </Screen>
@@ -144,4 +180,9 @@ const styles = StyleSheet.create({
   },
   accent: { color: colors.live },
   list: { gap: space.md },
+  note: {
+    color: colors.textMuted,
+    fontSize: fontSize.caption,
+    marginTop: space.sm,
+  },
 });
