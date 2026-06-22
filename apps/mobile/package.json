@@ -19,6 +19,7 @@
     "@matchora/shared": "workspace:*",
     "@matchora/ui": "workspace:*",
     "@tanstack/react-query": "^5.62.0",
+    "babel-preset-expo": "~12.0.0",
     "expo": "~52.0.0",
     "expo-asset": "~11.0.5",
     "expo-constants": "~17.0.0",
