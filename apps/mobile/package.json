@@ -15,6 +15,7 @@
     "eas:submit:ios": "eas submit --platform ios --profile production"
   },
   "dependencies": {
+    "@babel/runtime": "^8.0.0",
     "@matchora/shared": "workspace:*",
     "@matchora/ui": "workspace:*",
     "@tanstack/react-query": "^5.62.0",
