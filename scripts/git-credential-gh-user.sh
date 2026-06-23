@@ -12,7 +12,21 @@ set -euo pipefail
 account="${1:?usage: git-credential-gh-user.sh <github-account> <get|store|erase>}"
 operation="${2:-}"
 
+# Only answer credential lookups; never persist/delete on store|erase.
 [ "$operation" = "get" ] || exit 0
+
+# Defense-in-depth: git only invokes this via the github.com-scoped config key,
+# but parse the request and refuse to emit the token for any other host/protocol.
+host=""; protocol=""
+while IFS='=' read -r key value; do
+  [ -z "$key" ] && break
+  case "$key" in
+    host) host="$value" ;;
+    protocol) protocol="$value" ;;
+  esac
+done
+[ -n "$host" ] && [ "$host" != "github.com" ] && exit 0
+[ -n "$protocol" ] && [ "$protocol" != "https" ] && exit 0
 
 token="$(gh auth token --user "$account" 2>/dev/null || true)"
 if [ -z "$token" ]; then
