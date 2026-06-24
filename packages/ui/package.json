@@ -7,5 +7,5 @@
   "types": "./src/index.ts",
   "exports": { ".": "./src/index.ts", "./tokens": "./src/tokens.ts" },
   "scripts": { "typecheck": "tsc --noEmit", "lint": "eslint src --max-warnings 0" },
-  "devDependencies": { "typescript": "^5.7.2" }
+  "devDependencies": { "typescript": "^6.0.3" }
 }
