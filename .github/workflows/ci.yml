@@ -16,7 +16,7 @@ jobs:
       # pnpm version is read from package.json "packageManager"; do not also
       # set "version" here or action-setup errors with ERR_PNPM_BAD_PM_VERSION.
       - uses: pnpm/action-setup@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v6
         with:
           node-version: ${{ matrix.node }}
           cache: pnpm
